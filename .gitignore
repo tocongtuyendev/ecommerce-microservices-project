@@ -1,0 +1,27 @@
+# Build files
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+build-*.log
+.mvn/timing.properties
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+eclipse-formatter.xml
+# Log files
+*.log
+
+# Distribution files
+*.jar
+*.war
+*.ear
