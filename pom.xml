@@ -32,6 +32,7 @@
         <module>inventory-service</module>
         <module>order-service</module>
         <module>notification-service</module>
+        <module>common</module>
     </modules>
 
     <dependencyManagement>

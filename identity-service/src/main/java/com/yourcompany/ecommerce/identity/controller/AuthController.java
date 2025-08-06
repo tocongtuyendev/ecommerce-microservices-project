@@ -1,5 +1,6 @@
 package com.yourcompany.ecommerce.identity.controller;
 
+import com.yourcompany.ecommerce.common.response.ApiResponse;
 import com.yourcompany.ecommerce.identity.dto.JwtResponse;
 import com.yourcompany.ecommerce.identity.dto.LoginRequest;
 import com.yourcompany.ecommerce.identity.dto.SignupRequest;
@@ -43,7 +44,7 @@ public class AuthController {
     JwtUtils jwtUtils;
 
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(@RequestBody LoginRequest loginRequest) {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -55,19 +56,19 @@ public class AuthController {
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
-
-        return ResponseEntity.ok(new JwtResponse(jwt,
+        JwtResponse jwtResponse = new JwtResponse(jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
-                roles));
+                roles);
+        return ResponseEntity.ok(ApiResponse.success("Login success", jwtResponse));
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
+    public ResponseEntity<ApiResponse<Object>> registerUser(@RequestBody SignupRequest signUpRequest) {
         if (userRepository.findByUsername(signUpRequest.getUsername()).isPresent()) {
             return ResponseEntity
                     .badRequest()
-                    .body("Error: Username is already taken!");
+                    .body(ApiResponse.error(400, "Error: Username is already taken!"));
         }
 
         // Create new user's account
@@ -100,6 +101,6 @@ public class AuthController {
         user.setRoles(roles);
         userRepository.save(user);
 
-        return ResponseEntity.ok("User registered successfully!");
+        return ResponseEntity.ok(ApiResponse.success("User registered successfully!", null));
     }
 }

@@ -1,5 +1,6 @@
 package com.yourcompany.ecommerce.product.controller;
 
+import com.yourcompany.ecommerce.common.response.ApiResponse;
 import com.yourcompany.ecommerce.product.dto.ProductRequest;
 import com.yourcompany.ecommerce.product.dto.ProductResponse;
 import com.yourcompany.ecommerce.product.service.ProductService;
@@ -19,39 +20,42 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping
-    public List<ProductResponse> getAllProducts() {
-        return productService.getAllProducts();
+    public ApiResponse<List<ProductResponse>> getAllProducts() {
+        return ApiResponse.success(productService.getAllProducts());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(product -> ResponseEntity.ok(ApiResponse.success(product)))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(404, "Product not found")));
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse createProduct(@RequestBody ProductRequest productRequest) {
-        return productService.createProduct(productRequest);
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody ProductRequest productRequest) {
+        ProductResponse createdProduct = productService.createProduct(productRequest);
+        return new ResponseEntity<>(ApiResponse.success("Product created successfully", createdProduct),
+                HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id,
             @RequestBody ProductRequest productRequest) {
         return productService.updateProduct(id, productRequest)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(product -> ResponseEntity.ok(ApiResponse.success("Product updated successfully", product)))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(404, "Product not found")));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         if (productService.deleteProduct(id)) {
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
         }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(404, "Product not found"));
     }
 }
