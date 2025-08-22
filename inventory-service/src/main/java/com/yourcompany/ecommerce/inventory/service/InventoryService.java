@@ -15,19 +15,20 @@ public class InventoryService {
     private InventoryRepository inventoryRepository;
 
     @Transactional
-    public void reduceStock(String skuCode, Integer quantity) {
-        log.info("Attempting to reduce stock for skuCode: {} by quantity: {}", skuCode, quantity);
+    public void reduceStock(String skuCode, Integer quantityToReduce) {
+        log.info("Attempting to reduce stock for skuCode: {} by quantity: {}", skuCode, quantityToReduce);
 
         Inventory inventory = inventoryRepository.findBySkuCode(skuCode)
-                .orElseThrow(() -> new RuntimeException("Product not found in inventory: " + skuCode));
+                .orElseThrow(
+                        () -> new RuntimeException("Product with skuCode " + skuCode + " not found in inventory."));
 
-        if (inventory.getQuantity() < quantity) {
-            log.error("Stock not sufficient for product: {}. Required: {}, Available: {}", skuCode, quantity,
-                    inventory.getQuantity());
-            throw new RuntimeException("Insufficient stock for product: " + skuCode);
+        if (inventory.getQuantity() < quantityToReduce) {
+            // Ném ra exception nếu không đủ hàng
+            throw new RuntimeException("Insufficient stock for skuCode: " + skuCode + ". Required: " + quantityToReduce
+                    + ", Available: " + inventory.getQuantity());
         }
 
-        inventory.setQuantity(inventory.getQuantity() - quantity);
+        inventory.setQuantity(inventory.getQuantity() - quantityToReduce);
         inventoryRepository.save(inventory);
         log.info("Stock updated successfully for skuCode: {}. New quantity: {}", skuCode, inventory.getQuantity());
     }

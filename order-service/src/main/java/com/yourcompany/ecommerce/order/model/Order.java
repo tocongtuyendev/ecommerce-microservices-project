@@ -19,6 +19,8 @@ public class Order {
 
     private String orderNumber;
 
+    private String orderStatus;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems;
 }
