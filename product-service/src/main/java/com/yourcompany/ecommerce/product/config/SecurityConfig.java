@@ -1,32 +1,33 @@
 package com.yourcompany.ecommerce.product.config;
 
-import com.yourcompany.ecommerce.product.config.filter.AuthorizationHeaderFilter; // Import lớp filter
+import com.yourcompany.ecommerce.product.config.filter.AuthorizationHeaderFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
 
 @Configuration
-@EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+@EnableWebFluxSecurity
+@EnableReactiveMethodSecurity // Bật @PreAuthorize cho reactive
+public class SecurityConfig {
+
+    @Autowired
+    private AuthorizationHeaderFilter authorizationHeaderFilter;
 
     @Bean
-    public AuthorizationHeaderFilter authorizationHeaderFilter() {
-        return new AuthorizationHeaderFilter();
-    }
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
-                .authorizeRequests().anyRequest().authenticated();
-
-        // Thêm bộ lọc của chúng ta vào trước bộ lọc mặc định
-        http.addFilterBefore(authorizationHeaderFilter(), UsernamePasswordAuthenticationFilter.class);
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+                .csrf().disable()
+                .formLogin().disable()
+                .httpBasic().disable()
+                // Yêu cầu không tạo session, vì chúng ta dùng token
+                .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
+                .authorizeExchange(exchanges -> exchanges
+                        .anyExchange().authenticated())
+                .build();
     }
 }

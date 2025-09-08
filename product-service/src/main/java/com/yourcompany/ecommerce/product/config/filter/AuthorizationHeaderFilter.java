@@ -1,47 +1,43 @@
 package com.yourcompany.ecommerce.product.config.filter;
 
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class AuthorizationHeaderFilter extends OncePerRequestFilter {
+@Component
+public class AuthorizationHeaderFilter implements WebFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-
-        String username = request.getHeader("X-Username");
-        String rolesHeader = request.getHeader("X-User-Roles");
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        String username = request.getHeaders().getFirst("X-Username");
+        String rolesHeader = request.getHeaders().getFirst("X-User-Roles");
 
         if (username != null && rolesHeader != null && !rolesHeader.isEmpty()) {
-            // Logic xử lý chuỗi mới, mạnh mẽ hơn
-            // Input: ""
-            // 1. Bỏ dấu ngoặc: "ROLE_ADMIN, ROLE_USER"
             String cleanedRoles = rolesHeader.substring(1, rolesHeader.length() - 1);
-
-            // 2. Tách chuỗi và loại bỏ khoảng trắng ở mỗi phần tử
             List<SimpleGrantedAuthority> authorities = Arrays.stream(cleanedRoles.split(","))
-                    .map(String::trim) // Loại bỏ khoảng trắng thừa
+                    .map(String::trim)
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     username, null, authorities);
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // Đưa thông tin xác thực vào context của luồng reactive
+            return chain.filter(exchange)
+                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
         }
 
-        filterChain.doFilter(request, response);
+        return chain.filter(exchange);
     }
-
 }
