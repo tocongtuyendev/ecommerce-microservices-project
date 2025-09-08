@@ -6,13 +6,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder; // Thêm import này
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
 
 @Configuration
 @EnableWebFluxSecurity
-@EnableReactiveMethodSecurity // Bật @PreAuthorize cho reactive
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     @Autowired
@@ -24,10 +25,11 @@ public class SecurityConfig {
                 .csrf().disable()
                 .formLogin().disable()
                 .httpBasic().disable()
-                // Yêu cầu không tạo session, vì chúng ta dùng token
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .anyExchange().authenticated())
+                // Thêm dòng này để tích hợp bộ lọc của chúng ta
+                .addFilterAt(authorizationHeaderFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 }
