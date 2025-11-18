@@ -1,23 +1,16 @@
 package com.yourcompany.ecommerce.inventory.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "t_inventory")
+@Document(collection = "inventory")
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class Inventory {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true) // Thêm ràng buộc unique
-    private String skuCode;
-
+    private String id;
+    private String productId; // ID sản phẩm (từ product-service)
+    private String sellerId; // ID người bán (từ seller-management-service)
     private Integer quantity;
+    private Integer reservedQuantity; // Số lượng đang được tạm giữ (cho Saga)
 }

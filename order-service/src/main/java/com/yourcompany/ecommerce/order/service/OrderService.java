@@ -1,13 +1,13 @@
 package com.yourcompany.ecommerce.order.service;
 
 import com.yourcompany.ecommerce.common.event.OrderPlacedEvent;
-import com.yourcompany.ecommerce.order.config.RabbitMQConfig;
+import com.yourcompany.ecommerce.order.config.KafkaConfig;
 import com.yourcompany.ecommerce.order.dto.OrderItemRequest;
 import com.yourcompany.ecommerce.order.dto.OrderRequest;
 import com.yourcompany.ecommerce.order.model.Order;
 import com.yourcompany.ecommerce.order.model.OrderItem;
 import com.yourcompany.ecommerce.order.repository.OrderRepository;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ public class OrderService {
     private OrderRepository orderRepository;
 
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
     public String placeOrder(OrderRequest orderRequest) {
@@ -51,10 +51,8 @@ public class OrderService {
                 .collect(Collectors.toList());
         OrderPlacedEvent event = new OrderPlacedEvent(order.getOrderNumber(), eventItems);
 
-        // 6. Gửi sự kiện đến RabbitMQ
-        // - Gửi đến exchange 'order_exchange'
-        // - Với routing key là 'order.placed'
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY_ORDER_PLACED, event);
+    // 6. Gửi sự kiện đến Kafka topic 'order.placed'
+    kafkaTemplate.send(KafkaConfig.TOPIC_ORDER_PLACED, event);
 
         return order.getOrderNumber();
     }

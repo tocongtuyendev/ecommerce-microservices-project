@@ -48,8 +48,8 @@ class ProductServiceTest {
         productRequest.setDescription("Test Description");
         productRequest.setPrice(BigDecimal.valueOf(100.0));
 
-        product1 = new Product("1", "Test Product 1", "Description 1", 100.0);
-        product2 = new Product("2", "Test Product 2", "Description 2", 200.0);
+        product1 = new Product("1", "Test Product 1", "Description 1", new BigDecimal("25990000"),"S001","Tech Store");
+        product2 = new Product("2", "Test Product 2", "Description 2", new BigDecimal("30990000"),"S002","Mobile World");
 
         productResponse1 = new ProductResponse();
         productResponse1.setId("1");
@@ -66,7 +66,7 @@ class ProductServiceTest {
         when(productMapper.toProductResponse(any(Product.class))).thenReturn(productResponse1);
 
         // Act
-        Mono<ProductResponse> result = productService.createProduct(productRequest);
+        Mono<ProductResponse> result = productService.createProduct(productRequest,123L);
 
         // Assert
         StepVerifier.create(result)
@@ -129,7 +129,7 @@ class ProductServiceTest {
     @Test
     void updateProduct_shouldReturnUpdatedProductResponse() {
         // Arrange
-        Product updatedProduct = new Product("1", "Updated Name", "Updated Desc", 150.0);
+        Product updatedProduct = new Product("1", "Updated Name", "Updated Desc", new BigDecimal("120000"),"","");
         ProductResponse updatedResponse = new ProductResponse();
         updatedResponse.setId("1");
         updatedResponse.setName("Updated Name");
@@ -139,7 +139,7 @@ class ProductServiceTest {
         when(productMapper.toProductResponse(updatedProduct)).thenReturn(updatedResponse);
 
         // Act
-        Mono<ProductResponse> result = productService.updateProduct("1", productRequest);
+        Mono<ProductResponse> result = productService.updateProduct("1", productRequest,123L);
 
         // Assert
         StepVerifier.create(result)
@@ -153,7 +153,7 @@ class ProductServiceTest {
         when(productRepository.deleteById("1")).thenReturn(Mono.empty()); // deleteById returns Mono<Void>
 
         // Act
-        Mono<Void> result = productService.deleteProduct("1");
+        Mono<Void> result = productService.deleteProduct("1",123L);
 
         // Assert
         StepVerifier.create(result)

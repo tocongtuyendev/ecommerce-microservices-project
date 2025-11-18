@@ -42,4 +42,12 @@ public class SellerController {
                 .map(updatedSeller -> ResponseEntity.ok(ApiResponse.success("Seller status updated", updatedSeller)))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/by-user/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @customSecurityChecker.isSameUser(#userId)") // Bảo vệ
+    public Mono<ResponseEntity<ApiResponse<SellerResponse>>> getSellerByUserId(@PathVariable Long userId) {
+        return sellerService.getSellerByUserId(userId)
+                .map(seller -> ResponseEntity.ok(ApiResponse.success(seller)))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 }

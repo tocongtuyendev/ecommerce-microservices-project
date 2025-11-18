@@ -1,7 +1,7 @@
 package com.yourcompany.ecommerce.identity.controller;
 
 import com.yourcompany.ecommerce.common.response.ApiResponse;
-import com.yourcompany.ecommerce.identity.config.RabbitMQConfig;
+import com.yourcompany.ecommerce.identity.config.KafkaConfig;
 import com.yourcompany.ecommerce.identity.dto.JwtResponse;
 import com.yourcompany.ecommerce.identity.dto.LoginRequest;
 import com.yourcompany.ecommerce.identity.dto.SignupRequest;
@@ -12,7 +12,7 @@ import com.yourcompany.ecommerce.identity.repository.RoleRepository;
 import com.yourcompany.ecommerce.identity.repository.UserRepository;
 import com.yourcompany.ecommerce.identity.security.jwt.JwtUtils;
 import com.yourcompany.ecommerce.identity.security.services.UserDetailsImpl;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,8 +47,8 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
+        @Autowired
+        private KafkaTemplate<String, Object> kafkaTemplate;
 
     @PostMapping("/signin")
     public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -133,7 +133,7 @@ public class AuthController {
 
         // 4. Tạo và phát sự kiện để thông báo cho các service khác
         SellerProfileCreateEvent event = new SellerProfileCreateEvent(user.getId(), user.getUsername());
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY_SELLER_REGISTERED, event);
+        kafkaTemplate.send(KafkaConfig.TOPIC_SELLER_REGISTERED, event);
 
         return ResponseEntity.ok(ApiResponse.success("Seller registration request received. Your profile is being created.", null));
     }

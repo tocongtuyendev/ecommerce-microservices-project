@@ -1,12 +1,10 @@
 package com.yourcompany.ecommerce.inventory.repository;
 
 import com.yourcompany.ecommerce.inventory.model.Inventory;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import reactor.core.publisher.Mono;
 
-import java.util.Optional;
-
-@Repository
-public interface InventoryRepository extends JpaRepository<Inventory, Long> {
-    Optional<Inventory> findBySkuCode(String skuCode);
+public interface InventoryRepository extends ReactiveMongoRepository<Inventory, String> {
+    // Tìm kho hàng cho một sản phẩm cụ thể của một người bán cụ thể
+    Mono<Inventory> findBySellerIdAndProductId(String sellerId, String productId);
 }

@@ -2,10 +2,10 @@ package com.yourcompany.ecommerce.order.listener;
 
 import com.yourcompany.ecommerce.common.event.InventoryUpdateFailedEvent;
 import com.yourcompany.ecommerce.common.event.InventoryUpdateSuccessEvent;
+import com.yourcompany.ecommerce.order.config.KafkaConfig;
 import com.yourcompany.ecommerce.order.repository.OrderRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,35 +13,39 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class InventoryEventListener {
 
-    @Autowired
-    private OrderRepository orderRepository;
+    private final OrderRepository orderRepository;
 
-    // Listener này CHỈ xử lý sự kiện thành công
-    @RabbitListener(queues = "order_queue")
-    @Transactional
-    public void handleInventoryUpdateSuccess(InventoryUpdateSuccessEvent event) {
-        log.info("Received inventory update success for order: {}", event.getOrderNumber());
-        orderRepository.findByOrderNumber(event.getOrderNumber()).ifPresent(order -> {
-            if ("PENDING".equals(order.getOrderStatus())) {
-                order.setOrderStatus("CONFIRMED");
-                orderRepository.save(order);
-                log.info("Order {} status updated to CONFIRMED", order.getOrderNumber());
-            }
-        });
+    public InventoryEventListener(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
     }
 
-    // Listener này CHỈ xử lý sự kiện thất bại
-    @RabbitListener(queues = "order_queue")
+    // Listen to both success and failed inventory topics; dispatch by payload type
+    @KafkaListener(topics = {KafkaConfig.TOPIC_INVENTORY_SUCCESS, KafkaConfig.TOPIC_INVENTORY_FAILED}, containerFactory = "kafkaListenerContainerFactory")
     @Transactional
-    public void handleInventoryUpdateFailure(InventoryUpdateFailedEvent event) {
-        log.warn("Received inventory update failure for order: {}. Reason: {}", event.getOrderNumber(),
-                event.getReason());
-        orderRepository.findByOrderNumber(event.getOrderNumber()).ifPresent(order -> {
-            if ("PENDING".equals(order.getOrderStatus())) {
-                order.setOrderStatus("CANCELLED");
-                orderRepository.save(order);
-                log.warn("Order {} status updated to CANCELLED", order.getOrderNumber());
-            }
-        });
+    public void handleInventoryEvents(Object event) {
+        if (event instanceof InventoryUpdateSuccessEvent) {
+            InventoryUpdateSuccessEvent success = (InventoryUpdateSuccessEvent) event;
+            log.info("Received inventory update success for order: {}", success.getOrderNumber());
+            orderRepository.findByOrderNumber(success.getOrderNumber()).ifPresent(order -> {
+                if ("PENDING".equals(order.getStatus())) {
+                    order.setStatus("CONFIRMED");
+                    orderRepository.save(order);
+                    log.info("Order {} status updated to CONFIRMED", order.getOrderNumber());
+                }
+            });
+
+        } else if (event instanceof InventoryUpdateFailedEvent) {
+            InventoryUpdateFailedEvent failed = (InventoryUpdateFailedEvent) event;
+            log.warn("Received inventory update failure for order: {}. Reason: {}", failed.getOrderNumber(), failed.getReason());
+            orderRepository.findByOrderNumber(failed.getOrderNumber()).ifPresent(order -> {
+                if ("PENDING".equals(order.getStatus())) {
+                    order.setStatus("CANCELLED");
+                    orderRepository.save(order);
+                    log.warn("Order {} status updated to CANCELLED", order.getOrderNumber());
+                }
+            });
+        } else {
+            log.warn("Received unknown inventory event type: {}", event.getClass());
+        }
     }
 }

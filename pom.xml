@@ -33,6 +33,10 @@
         <module>seller-management-service</module>
         <module>inventory-service</module>
         <module>order-service</module>
+        <module>search-service</module>
+        <module>sync-service</module>
+        <module>payment-service</module>
+        <module>noti-service</module>
     </modules>
 
     <dependencyManagement>

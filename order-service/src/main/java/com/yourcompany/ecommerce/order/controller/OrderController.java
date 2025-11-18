@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -19,9 +21,12 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<String>> placeOrder(@RequestBody OrderRequest orderRequest) {
-        String orderNumber = orderService.placeOrder(orderRequest);
-        ApiResponse<String> response = ApiResponse.success("Order placed successfully. Order Number: " + orderNumber, orderNumber);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    public Mono<ResponseEntity<ApiResponse<String>>> placeOrder(@RequestBody OrderRequest orderRequest) {
+        return Mono.fromCallable(() -> orderService.placeOrder(orderRequest))
+                .subscribeOn(Schedulers.boundedElastic())
+                .map(orderNumber -> {
+                    ApiResponse<String> response = ApiResponse.success("Order placed successfully. Order Number: " + orderNumber, orderNumber);
+                    return new ResponseEntity<>(response, HttpStatus.CREATED);
+                });
     }
 }

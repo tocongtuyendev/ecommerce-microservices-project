@@ -5,6 +5,8 @@ import com.yourcompany.ecommerce.inventory.model.Inventory;
 import com.yourcompany.ecommerce.inventory.repository.InventoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -14,15 +16,10 @@ public class InventoryController {
     private InventoryRepository inventoryRepository;
 
     @PostMapping
-    public ApiResponse<Inventory> addStock(@RequestBody Inventory inventory) {
-        return ApiResponse.success("Stock added", inventoryRepository.save(inventory));
+    public Mono<ApiResponse<Mono<Inventory>>> addStock(@RequestBody Inventory inventory) {
+        return Mono.fromCallable(() -> inventoryRepository.save(inventory))
+                .subscribeOn(Schedulers.boundedElastic())
+                .map(saved -> ApiResponse.success("Stock added", saved));
     }
 
-    @GetMapping("/{skuCode}")
-    public ApiResponse<Integer> getStock(@PathVariable String skuCode) {
-        Integer quantity = inventoryRepository.findBySkuCode(skuCode)
-                .map(Inventory::getQuantity)
-                .orElse(0);
-        return ApiResponse.success(quantity);
-    }
 }

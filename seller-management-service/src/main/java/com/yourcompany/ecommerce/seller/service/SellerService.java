@@ -40,4 +40,9 @@ public class SellerService {
                 .map(sellerMapper::toSellerResponse);
         // TODO: Gửi sự kiện SellerApprovedEvent hoặc SellerRejectedEvent sau khi lưu thành công
     }
+
+    public Mono<SellerResponse> getSellerByUserId(Long userId) {
+        return sellerRepository.findByUserId(userId)
+                .map(sellerMapper::toSellerResponse);
+    }
 }

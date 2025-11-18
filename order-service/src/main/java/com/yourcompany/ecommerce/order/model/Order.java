@@ -1,26 +1,21 @@
 package com.yourcompany.ecommerce.order.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
-@Entity
-@Table(name = "t_orders")
+@Document(collection = "orders")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String orderNumber;
-
-    private String orderStatus;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> orderItems;
+    private String id;
+    private Long customerId; // ID của người mua
+    private String status; // PENDING, PROCESSING, COMPLETED, CANCELLED
+    private BigDecimal totalAmount;
+    private List<String> childOrderIds; // Liên kết đến các đơn hàng con
+    private Instant createdAt;
 }

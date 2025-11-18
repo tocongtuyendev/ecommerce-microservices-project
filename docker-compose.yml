@@ -12,16 +12,45 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  rabbitmq:
-    image: rabbitmq:3.9-management
-    container_name: rabbitmq
+    # Removed RabbitMQ. Use Kafka + Zookeeper instead for event streaming.
+    # Zookeeper and Kafka (Bitnami images)
+  zookeeper:
+    image: bitnami/zookeeper:3
+    container_name: zookeeper
     ports:
-      - "5672:5672"   # Cổng cho AMQP
-      - "15672:15672" # Cổng cho giao diện quản lý web
+      - "2181:2181"
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - ALLOW_ANONYMOUS_LOGIN=yes
 
+  kafka:
+    image: bitnami/kafka:3
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9581:9581"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
   mongodb:
     image: mongo:4.4
     container_name: mongodb
