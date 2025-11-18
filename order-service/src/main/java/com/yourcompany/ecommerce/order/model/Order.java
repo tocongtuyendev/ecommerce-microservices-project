@@ -13,6 +13,7 @@ import java.util.List;
 public class Order {
     @Id
     private String id;
+    private String orderNumber;
     private Long customerId; // ID của người mua
     private String status; // PENDING, PROCESSING, COMPLETED, CANCELLED
     private BigDecimal totalAmount;

@@ -17,5 +17,6 @@ public class RouterValidator {
 
         public Predicate<ServerHttpRequest> isSecured = request -> openApiEndpoints
                         .stream()
-                        .noneMatch(uri -> request.getURI().getPath().contains(uri));
+                        // Dùng startsWith để tránh false positive từ contains
+                        .noneMatch(uri -> request.getURI().getPath().startsWith(uri));
 }

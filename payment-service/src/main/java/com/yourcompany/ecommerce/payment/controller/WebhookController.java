@@ -1,5 +1,7 @@
 package com.yourcompany.ecommerce.payment.controller;
 
+import com.yourcompany.ecommerce.payment.service.PaymentProcessor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,14 +15,8 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/internal/payments")
 public class WebhookController {
 
-
-    private final PaymentProcessor processor;
-
-
-    public WebhookController(PaymentProcessor processor) {
-        this.processor = processor;
-    }
-
+    @Autowired
+    private PaymentProcessor processor;
 
     @PostMapping("/webhook")
     public Mono<ResponseEntity<String>> receiveWebhook(@RequestHeader(value = "X-Signature", required = false) String signature,

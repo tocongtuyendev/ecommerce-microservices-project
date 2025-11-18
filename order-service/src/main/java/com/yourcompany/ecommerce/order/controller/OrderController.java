@@ -22,8 +22,7 @@ public class OrderController {
 
     @PostMapping
     public Mono<ResponseEntity<ApiResponse<String>>> placeOrder(@RequestBody OrderRequest orderRequest) {
-        return Mono.fromCallable(() -> orderService.placeOrder(orderRequest))
-                .subscribeOn(Schedulers.boundedElastic())
+        return orderService.placeOrder(orderRequest)
                 .map(orderNumber -> {
                     ApiResponse<String> response = ApiResponse.success("Order placed successfully. Order Number: " + orderNumber, orderNumber);
                     return new ResponseEntity<>(response, HttpStatus.CREATED);
