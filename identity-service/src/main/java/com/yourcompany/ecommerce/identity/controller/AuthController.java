@@ -1,6 +1,7 @@
 package com.yourcompany.ecommerce.identity.controller;
 
 import com.yourcompany.ecommerce.common.response.ApiResponse;
+import com.yourcompany.ecommerce.identity.config.KafkaConfig;
 import com.yourcompany.ecommerce.identity.dto.JwtResponse;
 import com.yourcompany.ecommerce.identity.dto.LoginRequest;
 import com.yourcompany.ecommerce.identity.dto.SignupRequest;
@@ -11,6 +12,7 @@ import com.yourcompany.ecommerce.identity.repository.RoleRepository;
 import com.yourcompany.ecommerce.identity.repository.UserRepository;
 import com.yourcompany.ecommerce.identity.security.jwt.JwtUtils;
 import com.yourcompany.ecommerce.identity.security.services.UserDetailsImpl;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.yourcompany.ecommerce.common.event.SellerProfileCreateEvent;
 
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +46,9 @@ public class AuthController {
 
     @Autowired
     JwtUtils jwtUtils;
+
+        @Autowired
+        private KafkaTemplate<String, Object> kafkaTemplate;
 
     @PostMapping("/signin")
     public ResponseEntity<ApiResponse<JwtResponse>> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -90,6 +97,11 @@ public class AuthController {
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(adminRole);
                         break;
+                    case "seller": // <-- Thêm case mới cho "seller"
+                        Role sellerRole = roleRepository.findByName(ERole.ROLE_SELLER)
+                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(sellerRole);
+                        break;
                     default:
                         Role userRole = roleRepository.findByName(ERole.ROLE_USER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
@@ -102,5 +114,27 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(ApiResponse.success("User registered successfully!", null));
+    }
+    @PostMapping("/register-seller")
+    @PreAuthorize("hasRole('USER')") // Chỉ người dùng có vai trò USER mới được đăng ký
+    public ResponseEntity<ApiResponse<Object>> registerAsSeller(Authentication authentication) {
+        // 1. Lấy thông tin người dùng hiện tại từ token
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+
+        // 2. Lấy vai trò SELLER từ database
+        Role sellerRole = roleRepository.findByName(ERole.ROLE_SELLER)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+
+        // 3. Thêm vai trò SELLER cho người dùng
+        user.getRoles().add(sellerRole);
+        userRepository.save(user);
+
+        // 4. Tạo và phát sự kiện để thông báo cho các service khác
+        SellerProfileCreateEvent event = new SellerProfileCreateEvent(user.getId(), user.getUsername());
+        kafkaTemplate.send(KafkaConfig.TOPIC_SELLER_REGISTERED, event);
+
+        return ResponseEntity.ok(ApiResponse.success("Seller registration request received. Your profile is being created.", null));
     }
 }
