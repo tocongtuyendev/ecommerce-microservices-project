@@ -28,7 +28,6 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .anyExchange().authenticated())
-                // Thêm dòng này để tích hợp bộ lọc của chúng ta
                 .addFilterAt(authorizationHeaderFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }

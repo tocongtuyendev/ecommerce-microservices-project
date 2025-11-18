@@ -7,4 +7,7 @@ import reactor.core.publisher.Mono;
 public interface InventoryRepository extends ReactiveMongoRepository<Inventory, String> {
     // Tìm kho hàng cho một sản phẩm cụ thể của một người bán cụ thể
     Mono<Inventory> findBySellerIdAndProductId(String sellerId, String productId);
+    
+    // Tìm kho hàng theo productId (hoặc sku)
+    Mono<Inventory> findByProductId(String productId);
 }

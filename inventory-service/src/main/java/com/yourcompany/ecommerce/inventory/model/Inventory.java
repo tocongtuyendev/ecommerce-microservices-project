@@ -2,6 +2,7 @@ package com.yourcompany.ecommerce.inventory.model;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "inventory")
@@ -13,4 +14,8 @@ public class Inventory {
     private String sellerId; // ID người bán (từ seller-management-service)
     private Integer quantity;
     private Integer reservedQuantity; // Số lượng đang được tạm giữ (cho Saga)
+
+    // Version field for optimistic locking
+    @Version
+    private Long version;
 }

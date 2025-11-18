@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 @Slf4j
@@ -23,25 +25,23 @@ public class OrderEventListener {
     @KafkaListener(topics = KafkaConfig.TOPIC_ORDER_PLACED, containerFactory = "kafkaListenerContainerFactory")
     public void handleOrderPlacedEvent(OrderPlacedEvent event) {
         log.info("Received order placed event: {}", event.getOrderNumber());
-
-        try {
-            // Thử thực hiện việc trừ kho
-            for (OrderPlacedEvent.OrderItemData item : event.getOrderItems()) {
-                inventoryService.reduceStock(item.getProductSku(), item.getQuantity());
-            }
-
-            // Nếu không có lỗi, gửi sự kiện THÀNH CÔNG
-        InventoryUpdateSuccessEvent successEvent = new InventoryUpdateSuccessEvent(event.getOrderNumber());
-        kafkaTemplate.send(KafkaConfig.TOPIC_INVENTORY_SUCCESS, successEvent);
-        log.info("Sent inventory update SUCCESS event for order: {}", event.getOrderNumber());
-
-        } catch (RuntimeException e) {
-            // Nếu có lỗi (hết hàng, sản phẩm không tồn tại), gửi sự kiện THẤT BẠI
-            log.error("Inventory update FAILED for order: {}. Reason: {}", event.getOrderNumber(), e.getMessage());
-        InventoryUpdateFailedEvent failedEvent = new InventoryUpdateFailedEvent(event.getOrderNumber(),
-            e.getMessage());
-        kafkaTemplate.send(KafkaConfig.TOPIC_INVENTORY_FAILED, failedEvent);
-        log.info("Sent inventory update FAILED event for order: {}", event.getOrderNumber());
-        }
+        // Process items reactively. We use the productSku as productId/sku when looking up inventory.
+        Flux.fromIterable(event.getOrderItems())
+                // process sequentially to avoid overloading DB with concurrent updates for same product
+                .publishOn(Schedulers.boundedElastic())
+                .concatMap(item -> inventoryService.reduceStockByProductId(item.getProductSku(), item.getQuantity()))
+                .collectList()
+                .subscribe(savedInventories -> {
+                    // All items processed successfully
+                    InventoryUpdateSuccessEvent successEvent = new InventoryUpdateSuccessEvent(event.getOrderNumber());
+                    kafkaTemplate.send(KafkaConfig.TOPIC_INVENTORY_SUCCESS, successEvent);
+                    log.info("Sent inventory update SUCCESS event for order: {}", event.getOrderNumber());
+                }, err -> {
+                    // On error send failed event with reason
+                    log.error("Inventory update FAILED for order: {}. Reason: {}", event.getOrderNumber(), err.getMessage());
+                    InventoryUpdateFailedEvent failedEvent = new InventoryUpdateFailedEvent(event.getOrderNumber(), err.getMessage());
+                    kafkaTemplate.send(KafkaConfig.TOPIC_INVENTORY_FAILED, failedEvent);
+                    log.info("Sent inventory update FAILED event for order: {}", event.getOrderNumber());
+                });
     }
 }

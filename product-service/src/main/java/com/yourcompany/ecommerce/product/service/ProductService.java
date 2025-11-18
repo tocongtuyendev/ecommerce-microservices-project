@@ -2,12 +2,12 @@ package com.yourcompany.ecommerce.product.service;
 
 import com.yourcompany.ecommerce.product.dto.ProductRequest;
 import com.yourcompany.ecommerce.product.dto.ProductResponse;
+import com.yourcompany.ecommerce.product.dto.SellerResponse;
 import com.yourcompany.ecommerce.product.exception.ProductNotFoundException;
 import com.yourcompany.ecommerce.product.mapper.ProductMapper;
 import com.yourcompany.ecommerce.product.model.Product;
 import com.yourcompany.ecommerce.product.repository.ProductRepository;
 
-import com.yourcompany.ecommerce.seller.dto.SellerResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

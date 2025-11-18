@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 
 import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
@@ -38,13 +39,23 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 try {
                     jwtUtils.validateJwtToken(authHeader);
 
-                    // Thêm logic trích xuất và thêm header
+                    // Thêm logic trích xuất và thêm header (an toàn với null)
                     Claims claims = jwtUtils.getAllClaimsFromToken(authHeader);
-                    exchange.getRequest().mutate()
-                            .header("X-Username", claims.getSubject())
-                            .header("X-User-Roles", claims.get("roles").toString())
-                            .header("X-User-Id", claims.get("userId").toString())
+                    String username = claims.getSubject() != null ? claims.getSubject() : "";
+                    Object rolesObj = claims.get("roles");
+                    String roles = rolesObj != null ? rolesObj.toString() : "";
+                    Object userIdObj = claims.get("userId");
+                    String userId = userIdObj != null ? userIdObj.toString() : "";
+
+                    ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                            .header("X-Username", username)
+                            .header("X-User-Roles", roles)
+                            .header("X-User-Id", userId)
                             .build();
+
+                    // Gán request đã mutate trở lại cho exchange, sau đó forward
+                    ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
+                    return chain.filter(mutatedExchange);
 
                 } catch (Exception e) {
                     return this.onError(exchange, "Invalid Token", HttpStatus.UNAUTHORIZED);
