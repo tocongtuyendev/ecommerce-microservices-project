@@ -70,7 +70,10 @@
             <version>4.6.1</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
         <!-- Reactor Test (for StepVerifier, etc.) -->
         <dependency>
             <groupId>io.projectreactor</groupId>

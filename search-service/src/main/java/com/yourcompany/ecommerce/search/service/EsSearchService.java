@@ -50,6 +50,35 @@ public class EsSearchService {
     }
 
 
+    /**
+     * Index (create or update) a document in ES using product id as document id.
+     */
+    public Mono<String> indexDocument(String id, Object payload) {
+        try {
+            String body = mapper.writeValueAsString(payload);
+            String docId = URLEncoder.encode(id, StandardCharsets.UTF_8);
+            return es.put()
+                    .uri(uriBuilder -> uriBuilder.path("/" + index + "/_doc/" + docId).build())
+                    .body(BodyInserters.fromValue(body))
+                    .retrieve()
+                    .bodyToMono(String.class);
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
+    }
+
+    /**
+     * Delete a document by id from ES
+     */
+    public Mono<String> deleteDocument(String id) {
+        String docId = URLEncoder.encode(id, StandardCharsets.UTF_8);
+        return es.delete()
+                .uri(uriBuilder -> uriBuilder.path("/" + index + "/_doc/" + docId).build())
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
+
     private String escape(String q) {
         return q.replace("\"", "\\\"");
     }

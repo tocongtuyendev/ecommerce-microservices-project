@@ -14,6 +14,13 @@ import reactor.core.publisher.Mono;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+import java.util.UUID;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yourcompany.ecommerce.product.service.ProductEventPublisher;
 
 @Service
 public class ProductService {
@@ -26,6 +33,10 @@ public class ProductService {
 
     @Autowired
     private WebClient.Builder webClientBuilder;
+
+    @Autowired
+    private ProductEventPublisher eventPublisher;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public Flux<ProductResponse> getAllProducts() {
         return productRepository.findAll() // Trả về Flux<Product>
@@ -62,6 +73,15 @@ public class ProductService {
                     product.setSellerShopName(seller.getShopName());
                     return productRepository.save(product);
                 })
+                .flatMap(saved -> {
+                    String eventId = UUID.randomUUID().toString();
+                    ObjectNode event = mapper.createObjectNode();
+                    event.put("eventId", eventId);
+                    event.put("type", "product.created");
+                    event.set("payload", mapper.valueToTree(saved));
+                    return eventPublisher.publish("product-events", eventId, event)
+                            .then(Mono.just(saved));
+                })
                 .map(productMapper::toProductResponse);
     }
 
@@ -89,6 +109,15 @@ public class ProductService {
                     productMapper.updateProductFromDto(productRequest, product);
                     return productRepository.save(product);
                 })
+                .flatMap(saved -> {
+                    String eventId = UUID.randomUUID().toString();
+                    ObjectNode event = mapper.createObjectNode();
+                    event.put("eventId", eventId);
+                    event.put("type", "product.updated");
+                    event.set("payload", mapper.valueToTree(saved));
+                    return eventPublisher.publish("product-events", eventId, event)
+                            .then(Mono.just(saved));
+                })
                 .map(productMapper::toProductResponse);
     }
 
@@ -111,7 +140,17 @@ public class ProductService {
                     }
 
                     // Nếu là chủ sở hữu, tiến hành xóa
-                    return productRepository.delete(product); // Trả về Mono<Void>
+                    return productRepository.delete(product)
+                            .then(Mono.defer(() -> {
+                                String eventId = UUID.randomUUID().toString();
+                                ObjectNode event = mapper.createObjectNode();
+                                event.put("eventId", eventId);
+                                event.put("type", "product.deleted");
+                                ObjectNode payload = mapper.createObjectNode();
+                                payload.put("id", product.getId());
+                                event.set("payload", payload);
+                                return eventPublisher.publish("product-events", eventId, event).then();
+                            })); // Trả về Mono<Void>
                 });
     }
 }
